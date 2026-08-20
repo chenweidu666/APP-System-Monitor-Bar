@@ -87,6 +87,18 @@ class _TrayAppState extends State<TrayApp> with TrayListener {
           disabled: true,
         ));
       }
+      final root = _disks.firstWhere((d) => d.mountPoint == '/',
+          orElse: () => _disks.first);
+      items.add(MenuItem(
+        key: 'disk_bar',
+        label: _buildDiskBar(root, _workspaceBytes ?? 0),
+        disabled: true,
+      ));
+      items.add(MenuItem(
+        key: 'disk_bar_legend',
+        label: _buildDiskLegend(root, _workspaceBytes ?? 0),
+        disabled: true,
+      ));
     }
     items.addAll([
       MenuItem.separator(),
@@ -125,6 +137,37 @@ class _TrayAppState extends State<TrayApp> with TrayListener {
     } else if (menuItem.key == 'quit') {
       exit(0);
     }
+  }
+
+  /// 三段进度条（基于根分区 / 总容量）：
+  /// █ Workspace 占用 · ▓ 其他已用 · ░ 剩余空间
+  String _buildDiskBar(DiskUsage d, int workspaceBytes) {
+    const width = 20;
+    final total = d.totalBytes;
+    if (total <= 0) return '[----]';
+
+    final used = d.usedBytes;
+    final w = workspaceBytes.clamp(0, used);
+    final other = used - w;
+
+    var wb = (w / total * width).round();
+    var ob = (other / total * width).round();
+    if (wb + ob > width) wb = width - ob;
+    if (wb < 0) wb = 0;
+    final fb = width - wb - ob;
+
+    final bar = '█' * wb + '▓' * ob + '░' * fb;
+    return '[$bar] 已用 ${d.usedPercent.toStringAsFixed(0)}%  '
+        '${DiskUsage.formatBytes(used)}/${DiskUsage.formatBytes(total)}';
+  }
+
+  String _buildDiskLegend(DiskUsage d, int workspaceBytes) {
+    final used = d.usedBytes;
+    final w = workspaceBytes.clamp(0, used);
+    final other = used - w;
+    return '█ Workspace ${DiskUsage.formatBytes(w)}'
+        '  ·  ▓ 其他 ${DiskUsage.formatBytes(other)}'
+        '  ·  ░ 剩余 ${d.availableLabel}';
   }
 
   @override

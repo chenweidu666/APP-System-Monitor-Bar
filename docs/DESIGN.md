@@ -16,9 +16,10 @@
 | 功能 | 说明 |
 |------|------|
 | 托盘图标 | GNOME 顶栏右侧常驻，蓝色文件夹图标 |
-| 右键菜单 | Workspace 占用 + 磁盘分区占用列表 + 刷新 + 退出 |
+| 右键菜单 | Workspace 占用 + 磁盘分区占用列表 + 根分区三段进度条 + 刷新 + 退出 |
 | Workspace 采集 | `du -sb`，每 60 秒 |
 | 分区采集 | `df -P -B1 --local`，与 Workspace 同周期刷新 |
+| 三段进度条 | 基于根分区 `/`：█ Workspace · ▓ 其他已用 · ░ 剩余（字符块模拟三色） |
 | 手动刷新 | 菜单「刷新」立即扫描一次 |
 | 开机自启 | `~/.config/autostart/system_monitor_bar.desktop` |
 | 无主窗口 | 主窗口隐藏，仅保留托盘 |
@@ -86,6 +87,16 @@ final result = await Process.run('df', ['-P', '-B1', '--local']);
 // 每行格式: Filesystem total used available capacity Mounted-on
 ```
 
+### 5.6 三段进度条 (main.dart `_buildDiskBar` / `_buildDiskLegend`)
+```dart
+// 根分区 / 按总容量切三块:
+//   workspace  → '█'  其他已用(used-workspace) → '▓'  剩余 → '░'
+// 宽 20 字符, 每格 = total/20
+final wb = (workspace / total * width).round();
+final ob = (other / total * width).round();
+final fb = width - wb - ob;
+```
+
 ## 6. 里程碑
 
 | # | 内容 | 状态 |
@@ -93,7 +104,8 @@ final result = await Process.run('df', ['-P', '-B1', '--local']);
 | M1 | 托盘图标显示 + 右键菜单（静态文本） | ✅ 完成 |
 | M2 | 动态显示 Workspace 大小 + 60s 自动刷新 | ✅ 完成 |
 | M3 | 磁盘分区占用监控（所有真实分区比例） | ✅ 完成 |
-| M4 | 开机自启 | ✅ 完成 |
+| M4 | 根分区三段进度条 + 数值图例 | ✅ 完成 |
+| M5 | 开机自启 | ✅ 完成 |
 
 ## 7. 依赖
 
