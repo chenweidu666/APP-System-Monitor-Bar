@@ -63,16 +63,17 @@ class _TrayAppState extends State<TrayApp> with TrayListener {
   }
 
   Future<void> _updateTrayMenu() async {
-    final items = <MenuItem>[
-      MenuItem(
-        key: 'workspace_info',
-        label: _scanning
-            ? '扫描中…'
-            : 'Workspace: ${DiskUsage.formatBytes(_workspaceBytes ?? 0)}',
-      ),
-    ];
+    // Workspace 行暂不显示（要显示取消注释）
+    // final items = <MenuItem>[
+    //   MenuItem(
+    //     key: 'workspace_info',
+    //     label: _scanning
+    //         ? '扫描中…'
+    //         : 'Workspace: ${DiskUsage.formatBytes(_workspaceBytes ?? 0)}',
+    //   ),
+    // ];
+    final items = <MenuItem>[];
     if (_disks.isNotEmpty) {
-      items.add(MenuItem.separator());
       items.add(MenuItem(
         key: 'disks_header',
         label: '磁盘占用',
