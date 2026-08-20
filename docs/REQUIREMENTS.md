@@ -26,9 +26,11 @@ Workspace 目录占用，支持手动刷新与退出。无主窗口、无弹窗�
 - 托盘图标：GNOME 顶栏右侧常驻
 - 菜单项：
   - `Workspace: XXX GB`（当前占用，扫描中显示`扫描中…`）
+  - **磁盘占用**（只读，各真实分区一行）：`/ 44% (455G 可用)`、`/boot/efi 3% (1.1G 可用)`
   - `刷新`（手动立即扫描一次）
   - `退出`
-- 自动刷新：每 **60s** 扫描一次（可配常量 `_refreshInterval`）
+- 自动刷新：每 **60s** 扫描一次 Workspace 与各分区占用（可配常量 `_refreshInterval`）
+  - Workspace 用 `du -sb`，分区用 `df -P -B1 --local`（排除虚拟文件系统与 snap loop 设备）
 - 开机自启：`~/.config/autostart/system_monitor_bar.desktop`
 
 ## 5. 非功能需求
@@ -42,7 +44,8 @@ Workspace 目录占用，支持手动刷新与退出。无主窗口、无弹窗�
 ```
 11-System-Monitor-Bar/
 ├── lib/
-│   └── main.dart              # 托盘应用入口
+│   ├── main.dart              # 托盘应用入口
+│   └── data/disk_usage.dart   # 磁盘分区占用采集 (df)
 ├── assets/
 │   └── tray_icon.png          # 托盘图标 (64x64)
 ├── linux/                     # Flutter Linux runner
@@ -58,4 +61,5 @@ Workspace 目录占用，支持手动刷新与退出。无主窗口、无弹窗�
 |---|------|------|
 | M1 | 托盘图标 + 右键菜单（静态文本） | ✅ |
 | M2 | 动态显示 Workspace 大小 + 60s 自动刷新 | ✅ |
-| M3 | 开机自启 | ✅ |
+| M3 | 磁盘分区占用监控（所有真实分区比例） | ✅ |
+| M4 | 开机自启 | ✅ |

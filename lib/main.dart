@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:tray_manager/tray_manager.dart';
 
+import 'data/disk_usage.dart';
+
 void main() {
   runApp(const WorkspaceMonitorApp());
 }
@@ -33,6 +35,7 @@ class _TrayAppState extends State<TrayApp> with TrayListener {
   static const _refreshInterval = Duration(seconds: 60);
 
   int? _workspaceBytes;
+  List<DiskUsage> _disks = const [];
   bool _scanning = false;
 
   @override
@@ -60,25 +63,45 @@ class _TrayAppState extends State<TrayApp> with TrayListener {
   }
 
   Future<void> _updateTrayMenu() async {
-    final menu = Menu(items: [
+    final items = <MenuItem>[
       MenuItem(
         key: 'workspace_info',
         label: _scanning
             ? '扫描中…'
-            : 'Workspace: ${_fmtBytes(_workspaceBytes ?? 0)}',
+            : 'Workspace: ${DiskUsage.formatBytes(_workspaceBytes ?? 0)}',
       ),
+    ];
+    if (_disks.isNotEmpty) {
+      items.add(MenuItem.separator());
+      items.add(MenuItem(
+        key: 'disks_header',
+        label: '磁盘占用',
+        disabled: true,
+      ));
+      for (final d in _disks) {
+        items.add(MenuItem(
+          key: 'disk_${d.mountPoint}',
+          label: '${d.mountPoint}  '
+              '${d.usedPercent.toStringAsFixed(0)}%  '
+              '(${d.availableLabel} 可用)',
+          disabled: true,
+        ));
+      }
+    }
+    items.addAll([
       MenuItem.separator(),
       MenuItem(key: 'refresh', label: _scanning ? '扫描中…' : '刷新'),
       MenuItem.separator(),
       MenuItem(key: 'quit', label: '退出'),
     ]);
-    await trayManager.setContextMenu(menu);
+    await trayManager.setContextMenu(Menu(items: items));
   }
 
   Future<void> _scan() async {
     if (_scanning) return;
     setState(() => _scanning = true);
     await _updateTrayMenu();
+    final disksFuture = DiskCollector.collect();
     var bytes = _workspaceBytes;
     try {
       final result = await Process.run('du', ['-sb', _workspacePath]);
@@ -86,10 +109,12 @@ class _TrayAppState extends State<TrayApp> with TrayListener {
         bytes = int.tryParse((result.stdout as String).trim().split('\t').first);
       }
     } catch (_) {}
+    final disks = await disksFuture;
     if (mounted) setState(() => _scanning = false);
     if (bytes != null && bytes != _workspaceBytes) {
       _workspaceBytes = bytes;
     }
+    _disks = disks;
     await _updateTrayMenu();
   }
 
@@ -100,17 +125,6 @@ class _TrayAppState extends State<TrayApp> with TrayListener {
     } else if (menuItem.key == 'quit') {
       exit(0);
     }
-  }
-
-  String _fmtBytes(int bytes) {
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    double v = bytes.toDouble();
-    int i = 0;
-    while (v >= 1024 && i < units.length - 1) {
-      v /= 1024;
-      i++;
-    }
-    return '${v.toStringAsFixed(v >= 100 ? 0 : 1)}${units[i]}';
   }
 
   @override
