@@ -78,15 +78,16 @@ class _TrayAppState extends State<TrayApp> with TrayListener {
         label: '磁盘占用',
         disabled: true,
       ));
-      for (final d in _disks) {
-        items.add(MenuItem(
-          key: 'disk_${d.mountPoint}',
-          label: '${d.mountPoint}  '
-              '${d.usedPercent.toStringAsFixed(0)}%  '
-              '(${d.availableLabel} 可用)',
-          disabled: true,
-        ));
-      }
+      // 各分区文本行暂不显示（要显示取消注释）
+      // for (final d in _disks) {
+      //   items.add(MenuItem(
+      //     key: 'disk_${d.mountPoint}',
+      //     label: '${d.mountPoint}  '
+      //         '${d.usedPercent.toStringAsFixed(0)}%  '
+      //         '(${d.availableLabel} 可用)',
+      //     disabled: true,
+      //   ));
+      // }
       final root = _disks.firstWhere((d) => d.mountPoint == '/',
           orElse: () => _disks.first);
       items.add(MenuItem(
