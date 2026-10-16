@@ -20,6 +20,13 @@ class DiskUsage {
 
   String get availableLabel => formatBytes(availableBytes);
 
+  static DiskUsage pickRoot(List<DiskUsage> disks) {
+    return disks.firstWhere(
+      (d) => d.mountPoint == '/',
+      orElse: () => disks.first,
+    );
+  }
+
   static String formatBytes(int bytes) {
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
     double v = bytes.toDouble();
@@ -33,9 +40,32 @@ class DiskUsage {
 }
 
 class DiskCollector {
-  /// 收集真实磁盘分区占用，排除虚拟文件系统与 snap loop 设备。
+  static final _skipMountPrefixes = [
+    '/run',
+    '/dev',
+    '/sys',
+    '/proc',
+    '/snap',
+    '/var/snap',
+  ];
+
+  static bool _isInterestingMount(String mount) {
+    if (mount == '/') {
+      return true;
+    }
+    if (mount.startsWith('/media/') || mount.startsWith('/mnt/')) {
+      return true;
+    }
+    if (mount.startsWith('/home')) return true;
+    for (final p in _skipMountPrefixes) {
+      if (mount == p || mount.startsWith('$p/')) return false;
+    }
+    return false;
+  }
+
+  /// 收集真实磁盘分区；过滤 tmpfs / snap loop，保留 / 与外置盘。
   static Future<List<DiskUsage>> collect() async {
-    final result = await Process.run('df', ['-P', '-B1', '--local']);
+    final result = await Process.run('df', ['-P', '-B1']);
     if (result.exitCode != 0) return [];
 
     final lines = (result.stdout as String).trim().split('\n');
@@ -47,6 +77,9 @@ class DiskCollector {
       if (!filesystem.startsWith('/dev/')) continue;
       if (filesystem.startsWith('/dev/loop')) continue;
 
+      final mount = parts[5];
+      if (!_isInterestingMount(mount)) continue;
+
       final totalBytes = int.tryParse(parts[1]);
       final usedBytes = int.tryParse(parts[2]);
       final availableBytes = int.tryParse(parts[3]);
@@ -54,13 +87,23 @@ class DiskCollector {
         continue;
       }
       usages.add(DiskUsage(
-        mountPoint: parts[5],
+        mountPoint: mount,
         filesystem: filesystem,
         totalBytes: totalBytes,
         usedBytes: usedBytes,
         availableBytes: availableBytes,
       ));
     }
+
+    usages.sort((a, b) => _mountRank(a.mountPoint).compareTo(_mountRank(b.mountPoint)));
     return usages;
+  }
+
+  static int _mountRank(String mount) {
+    if (mount == '/') return 0;
+    if (mount.startsWith('/boot')) return 1;
+    if (mount.startsWith('/home')) return 2;
+    if (mount.startsWith('/media/') || mount.startsWith('/mnt/')) return 3;
+    return 9;
   }
 }

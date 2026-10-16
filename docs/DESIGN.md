@@ -1,6 +1,6 @@
 # Workspace 空间监控 — 设计文档
 
-> 版本：v2.0 (2026-08-20)
+> 版本：v3.0 (2026-08-30)
 > 技术栈：Flutter (Linux Desktop) + tray_manager
 
 ## 1. 需求
@@ -16,9 +16,10 @@
 | 功能 | 说明 |
 |------|------|
 | 托盘图标 | GNOME 顶栏右侧常驻，蓝色文件夹图标 |
-| 右键菜单 | Workspace 占用 + 磁盘分区占用列表 + 根分区三段进度条 + 刷新 + 退出 |
-| Workspace 采集 | `du -sb`，每 60 秒 |
-| 分区采集 | `df -P -B1 --local`，与 Workspace 同周期刷新 |
+| 右键菜单 | Workspace 占用 + 根分区三段进度条 + 其他分区 + 虚拟机磁盘 + 低空间警告 + 更新时间 + 打开目录 + 刷新 + 退出 |
+| Workspace 采集 | `du -sb`，默认每 **5 分钟**（手动刷新立即） |
+| 分区采集 | `df -P -B1`，每 **60 秒**；过滤 tmpfs、`/boot`，保留 `/` 和外置 `/media` |
+| 虚拟机采集 | `virsh -c qemu:///system domblkinfo`，与分区信息同步刷新；仅统计 `disk` 块设备，不统计 ISO 光盘 |
 | 三段进度条 | 基于根分区 `/`：█ Workspace · ▓ 其他已用 · ░ 剩余（字符块模拟三色） |
 | 手动刷新 | 菜单「刷新」立即扫描一次 |
 | 开机自启 | `~/.config/autostart/system_monitor_bar.desktop` |
@@ -39,7 +40,14 @@
 11-System-Monitor-Bar/
 ├── pubspec.yaml
 ├── lib/
-│   └── main.dart              # 托盘应用入口
+│   ├── main.dart
+│   ├── config/monitor_config.dart
+│   ├── data/
+│   │   ├── disk_usage.dart
+│   │   └── workspace_scanner.dart
+│   └── ui/
+│       ├── disk_bar.dart
+│       └── tray_menu_builder.dart
 ├── assets/
 │   └── tray_icon.png          # 托盘图标 (64x64)
 ├── linux/                     # Flutter Linux runner
